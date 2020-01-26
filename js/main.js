@@ -1,13 +1,61 @@
 class Game {
+  static _canvas = document.getElementById("ctx");
+  static _ctx = Game._canvas.getContext("2d");
+
   constructor() {
-    this._canvas = document.getElementById("ctx");
-    this._ctx = this._canvas.getContext("2d");
-    this._ctx.font = "20px Calibri";
+    //Game._ctx.font = "20px Calibri";
     this._width = 500;
     this._height = 500;
     this._snake = new Snake();
     this._food = new Food(this);
+    this._currentDirection = null;
+    console.log("snake", this._snake);
+    this.setEvents();
     this.render();
+  }
+
+  setEvents() {
+    document.onkeydown = this.onArrowKeyDown.bind(this);
+
+    setInterval(() => {
+      console.log("CHECK", this._currentDirection);
+      if (this._currentDirection) {
+        //avanzar
+        this._snake.updateBody(this._currentDirection);
+        this.drawSnake();
+      }
+    }, 100);
+  }
+
+  onArrowKeyDown(e) {
+    const { keyCode } = e;
+    console.log("key down", keyCode);
+    if ([37, 38, 39, 40].indexOf(keyCode) !== -1) {
+      switch (keyCode) {
+        case 37:
+          //left
+          this._currentDirection = "L";
+          break;
+        case 38:
+          //up
+          this._currentDirection = "U";
+
+          break;
+        case 39:
+          //right
+          this._currentDirection = "R";
+
+          break;
+        case 40:
+          //down
+          this._currentDirection = "B";
+
+          break;
+
+        default:
+          break;
+      }
+    }
   }
 
   get width() {
@@ -19,12 +67,13 @@ class Game {
   }
 
   drawSnake() {
-    const ctx = this._ctx;
+    const ctx = Game.ctx;
     const snake = this._snake;
     ctx.save();
-    ctx.fillStyle = snake.color;
 
-    snake.body.map(bp => {
+    snake.body.map((bp, i) => {
+      ctx.fillStyle = i === 0 ? "black" : snake.color;
+
       ctx.fillRect(bp.x, bp.y, snake.dimensions[0], snake.dimensions[1]);
     });
 
@@ -33,7 +82,7 @@ class Game {
 
   drawFood() {
     const food = this._food;
-    const ctx = this._ctx;
+    const ctx = Game.ctx;
 
     ctx.save();
     ctx.fillStyle = food.color;
@@ -48,24 +97,26 @@ class Game {
     this.drawFood();
   }
 
-  get ctx() {
-    return this._ctx;
+  static get ctx() {
+    return Game._ctx;
   }
 
   generateRandomCoordinate() {
-    const coordinates = this._canvas.getBoundingClientRect();
+    const coordinates = Game._canvas.getBoundingClientRect();
     const { top, right, bottom, left } = coordinates;
 
     const x = Math.floor(Math.random() * right) + left;
     const y = Math.floor(Math.random() * bottom) + top;
 
-    const roundedX =
-      Math.floor(x / this._snake.dimensions[0]) * this._snake.dimensions[0];
+    const roundedX = Math.floor(x / 10) * 10;
 
-    const roundedY =
-      Math.floor(y / this._snake.dimensions[1]) * this._snake.dimensions[1];
+    const roundedY = Math.floor(y / 10) * 10;
 
     return [roundedX, roundedY];
+  }
+
+  static clearRectangle(x, y) {
+    Game.ctx.clearRect(x, y, 20, 20);
   }
 }
 
@@ -78,6 +129,7 @@ class Snake {
     ];
     this._color = "green";
     this._dimensions = [20, 20];
+    this.step = 20;
   }
 
   //addPart() {}
@@ -97,6 +149,38 @@ class Snake {
   get dimensions() {
     return this._dimensions;
   }
+
+  updateBody(direction) {
+    const body = this._body;
+    let prevCoords = [];
+    for (let i = body.length - 1; i >= 0; i--) {
+      if (i === 0) {
+        //direction
+        switch (direction) {
+          case "U":
+            body[i].y -= this.step;
+            break;
+
+          case "R":
+            body[i].x += this.step;
+            break;
+
+          case "B":
+            body[i].y += this.step;
+            break;
+          case "L":
+            body[i].x -= this.step;
+            break;
+        }
+        return;
+      }
+      const nextElem = body[i - 1];
+      prevCoords = [nextElem.x, nextElem.y];
+      Game.clearRectangle(body[i].x, body[i].y);
+      body[i].x = nextElem.x;
+      body[i].y = nextElem.y;
+    }
+  }
 }
 
 class SnakeBodyPart {
@@ -109,8 +193,16 @@ class SnakeBodyPart {
     return this._x;
   }
 
+  set x(x) {
+    this._x = x;
+  }
+
   get y() {
     return this._y;
+  }
+
+  set y(y) {
+    this._y = y;
   }
 }
 
@@ -147,6 +239,3 @@ class Food {
 }
 
 const game = new Game();
-const ctx = game.ctx;
-
-console.log(ctx);
