@@ -1,14 +1,14 @@
 class Game {
   static _canvas = document.getElementById("ctx");
   static _ctx = Game._canvas.getContext("2d");
-
+  static coordinates = Game._canvas.getBoundingClientRect();
+  static currentDirection = null;
   constructor() {
     //Game._ctx.font = "20px Calibri";
     this._width = 500;
     this._height = 500;
     this._snake = new Snake();
-    this._food = new Food(this);
-    this._currentDirection = null;
+    this._food = null;
     console.log("snake", this._snake);
     this.setEvents();
     this.render();
@@ -18,10 +18,10 @@ class Game {
     document.onkeydown = this.onArrowKeyDown.bind(this);
 
     setInterval(() => {
-      console.log("CHECK", this._currentDirection);
-      if (this._currentDirection) {
+      console.log("CHECK", Game.currentDirection);
+      if (Game.currentDirection) {
         //avanzar
-        this._snake.updateBody(this._currentDirection);
+        this._snake.updateBody(Game.currentDirection);
         this.drawSnake();
       }
     }, 100);
@@ -34,21 +34,21 @@ class Game {
       switch (keyCode) {
         case 37:
           //left
-          this._currentDirection = "L";
+          Game.currentDirection = "L";
           break;
         case 38:
           //up
-          this._currentDirection = "U";
+          Game.currentDirection = "U";
 
           break;
         case 39:
           //right
-          this._currentDirection = "R";
+          Game.currentDirection = "R";
 
           break;
         case 40:
           //down
-          this._currentDirection = "B";
+          Game.currentDirection = "B";
 
           break;
 
@@ -81,6 +81,7 @@ class Game {
   }
 
   drawFood() {
+    this._food = new Food(this);
     const food = this._food;
     const ctx = Game.ctx;
 
@@ -101,12 +102,11 @@ class Game {
     return Game._ctx;
   }
 
-  generateRandomCoordinate() {
-    const coordinates = Game._canvas.getBoundingClientRect();
-    const { top, right, bottom, left } = coordinates;
+  generateRandomCoordinates() {
+    const { top, right, bottom, left } = Game.coordinates;
 
-    const x = Math.floor(Math.random() * right) + left;
-    const y = Math.floor(Math.random() * bottom) + top;
+    const x = Math.floor(Math.random() * (right + 20)) + (left - 20);
+    const y = Math.floor(Math.random() * (bottom - 20)) + (top + 20);
 
     const roundedX = Math.floor(x / 10) * 10;
 
@@ -117,6 +117,54 @@ class Game {
 
   static clearRectangle(x, y) {
     Game.ctx.clearRect(x, y, 20, 20);
+  }
+
+  static clearFood(x, y) {
+    Game.ctx.beginPath();
+    Game.ctx.clearRect(x - 10 - 1, y - 10 - 1, 10 * 2 + 2, 10 * 2 + 2);
+    Game.ctx.closePath();
+  }
+
+  static convertToInboundCoordinates(x, y) {
+    const { top, right, bottom, left } = Game.coordinates;
+
+    const newCoords = [];
+
+    if (x < left) {
+      newCoords[0] = right;
+    } else if (x > right) {
+      newCoords[0] = left;
+    } else {
+      newCoords[0] = x;
+    }
+
+    if (y > bottom) {
+      newCoords[1] = top;
+    } else if (y < top) {
+      newCoords[1] = bottom;
+    } else {
+      newCoords[1] = y;
+    }
+
+    return newCoords;
+  }
+
+  detectCollision(x, y) {
+    const food = this._food;
+    //(x < food.x + 10 ||  x > food.x - 10) && (y < food.y + 10 ||  y > food.y - 10)
+    if (
+      x > food.x - 25 &&
+      x < food.x + 25 &&
+      y > food.y - 25 &&
+      y < food.y + 25
+    ) {
+      //add body to snake
+      console.log("you ate food");
+      this._snake.addBodyPart();
+      this.drawSnake();
+      Game.clearFood(this._food.x, this._food.y);
+      this.drawFood();
+    }
   }
 }
 
@@ -150,35 +198,99 @@ class Snake {
     return this._dimensions;
   }
 
+  addBodyPart(direction) {
+    let coords = [];
+    let _x = this.body[this.body.length - 1].x;
+    let _y = this.body[this.body.length - 1].y;
+
+    switch (direction) {
+      case "U":
+        coords[0] = _x;
+        convertedCoords = Game.convertToInboundCoordinates(
+          null,
+          _y + this.step
+        );
+        coords[1] = convertedCoords[1];
+        break;
+
+      case "R":
+        convertedCoords = Game.convertToInboundCoordinates(
+          _y - this.step,
+          null
+        );
+        coords[0] = convertedCoords[0];
+        coords[1] = _y;
+        break;
+
+      case "B":
+        coords[0] = _x;
+        convertedCoords = Game.convertToInboundCoordinates(
+          null,
+          _y - this.step
+        );
+        coords[1] = convertedCoords[1];
+        break;
+      case "L":
+        convertedCoords = Game.convertToInboundCoordinates(
+          _x + this.step,
+          null
+        );
+        coords[0] = convertedCoords[0];
+        coords[1] = _y;
+        break;
+    }
+
+    const newBodyPart = new SnakeBodyPart(coords[0], coords[1]);
+    this.body.push(newBodyPart);
+  }
+
   updateBody(direction) {
-    const body = this._body;
+    const body = this.body;
     let prevCoords = [];
+    let convertedCoords;
     for (let i = body.length - 1; i >= 0; i--) {
+      game.detectCollision(body[i].x, body[i].y);
       if (i === 0) {
         //direction
         switch (direction) {
           case "U":
-            body[i].y -= this.step;
+            convertedCoords = Game.convertToInboundCoordinates(
+              null,
+              body[i].y - this.step
+            );
+            body[i].y = convertedCoords[1];
             break;
 
           case "R":
-            body[i].x += this.step;
+            convertedCoords = Game.convertToInboundCoordinates(
+              body[i].x + this.step,
+              null
+            );
+            body[i].x = convertedCoords[0];
             break;
 
           case "B":
-            body[i].y += this.step;
+            convertedCoords = Game.convertToInboundCoordinates(
+              null,
+              body[i].y + this.step
+            );
+            body[i].y = convertedCoords[1];
             break;
           case "L":
-            body[i].x -= this.step;
+            convertedCoords = Game.convertToInboundCoordinates(
+              body[i].x - this.step,
+              null
+            );
+            body[i].x = convertedCoords[0];
             break;
         }
         return;
       }
       const nextElem = body[i - 1];
-      prevCoords = [nextElem.x, nextElem.y];
+      prevCoords = Game.convertToInboundCoordinates(nextElem.x, nextElem.y);
       Game.clearRectangle(body[i].x, body[i].y);
-      body[i].x = nextElem.x;
-      body[i].y = nextElem.y;
+      body[i].x = prevCoords[0];
+      body[i].y = prevCoords[1];
     }
   }
 }
@@ -211,7 +323,7 @@ class Food {
     this._width = 20;
     this._height = 20;
     this._color = "orange";
-    const randomCoordinate = game.generateRandomCoordinate();
+    const randomCoordinate = game.generateRandomCoordinates();
     this._x = randomCoordinate[0];
 
     this._y = randomCoordinate[1];
@@ -231,6 +343,14 @@ class Food {
 
   get y() {
     return this._y;
+  }
+
+  set x(x) {
+    this._x = x;
+  }
+
+  set y(y) {
+    this._y = y;
   }
 
   get color() {
