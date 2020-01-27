@@ -1,4 +1,8 @@
 class Game {
+  static dimensions = {
+    width: 500,
+    height: 500
+  };
   static _canvas = document.getElementById("ctx");
   static _ctx = Game._canvas.getContext("2d");
   static coordinates = Game._canvas.getBoundingClientRect();
@@ -61,7 +65,7 @@ class Game {
     snake.body.map((bp, i) => {
       ctx.fillStyle = i === 0 ? "#9b59b6" : snake.color;
 
-      ctx.fillRect(bp.x, bp.y, snake.dimensions[0], snake.dimensions[1]);
+      ctx.fillRect(bp.x, bp.y, snake.body[i].width, snake.body[i].height);
     });
 
     ctx.restore();
@@ -75,7 +79,7 @@ class Game {
     ctx.save();
     ctx.fillStyle = food.color;
     ctx.beginPath();
-    ctx.arc(food.x, food.y, 10, 0, 2 * Math.PI);
+    ctx.arc(food.x, food.y, food.radius, 0, 2 * Math.PI);
     ctx.fill();
     ctx.restore();
   }
@@ -92,9 +96,11 @@ class Game {
   //generates a random coordinate within the bounds of the canvas
   generateRandomCoordinates() {
     const { top, right, bottom, left } = Game.coordinates;
+    const distanceToWalls = 20;
 
-    const x = Math.floor(Math.random() * 480 + 20);
-    const y = Math.floor(Math.random() * 480 + 20);
+    const x = Math.floor(Math.random() * 480 + distanceToWalls);
+    const y = Math.floor(Math.random() * 480 + distanceToWalls);
+    console.log([x, y]);
     return [x, y];
   }
 
@@ -106,8 +112,8 @@ class Game {
     return x >= right || x <= left || y <= top || y >= bottom ? false : true;
   }
   //clear a body part of the snake from screen
-  static clearSnakeBodyPart(x, y) {
-    Game.ctx.clearRect(x, y, 20, 20);
+  static clearSnakeBodyPart(bodyPart) {
+    Game.ctx.clearRect(bodyPart.x, bodyPart.y, bodyPart.width, bodyPart.height);
   }
   //clears food from screen
   static clearFood(x, y) {
@@ -141,32 +147,35 @@ class Game {
 
     return newCoords;
   }
-  //detects a collision between two points. Eg: Between the snake's head and the food
-  detectCollision(x, y) {
-    const food = this._food;
-    const collisionRange = 25;
+  //detects a collision between two points. Eg: Between the snake's head and the food, between the snake head and body
+  detectCollision(firstObject, secondObject, collisionRange) {
     if (
-      x > food.x - collisionRange &&
-      x < food.x + collisionRange &&
-      y > food.y - collisionRange &&
-      y < food.y + collisionRange
+      firstObject &&
+      secondObject &&
+      firstObject.x > secondObject.x - collisionRange &&
+      firstObject.x < secondObject.x + collisionRange &&
+      firstObject.y > secondObject.y - collisionRange &&
+      firstObject.y < secondObject.y + collisionRange
     ) {
-      //add body to snake
-      console.log("Found food. Point earned!");
-      this._snake.addBodyPart();
-      this.drawSnake();
-      Game.clearFood(this._food.x, this._food.y);
-      this.drawFood();
+      return true;
     }
+
+    return false;
+
+    //detect collision between snake's head and body
+    /*  const head = this._snake.body[0];
+    const body = this._snake.body.slice(1);
+
+    body.some() */
   }
 }
 
 class Snake {
   constructor() {
     this._body = [
-      new SnakeBodyPart(220, 200),
-      new SnakeBodyPart(210, 200),
-      new SnakeBodyPart(200, 200)
+      new SnakeBodyPart(220, 200, 20, 20),
+      new SnakeBodyPart(210, 200, 20, 20),
+      new SnakeBodyPart(200, 200, 20, 20)
     ];
     this._color = "#27ae60";
     this._dimensions = [20, 20];
@@ -242,8 +251,13 @@ class Snake {
     const body = this.body;
     let prevCoords = [];
     let convertedCoords;
+    let doCollide = false;
     for (let i = body.length - 1; i >= 0; i--) {
-      game.detectCollision(body[i].x, body[i].y);
+      doCollide = game.detectCollision(
+        { x: body[i].x, y: body[i].y },
+        game.food,
+        30
+      );
       if (i === 0) {
         //direction
         switch (direction) {
@@ -282,7 +296,7 @@ class Snake {
       }
       const nextElem = body[i - 1];
       prevCoords = Game.convertToInboundCoordinates(nextElem.x, nextElem.y);
-      Game.clearSnakeBodyPart(body[i].x, body[i].y);
+      Game.clearSnakeBodyPart(body[i]);
       body[i].x = prevCoords[0];
       body[i].y = prevCoords[1];
     }
@@ -290,9 +304,11 @@ class Snake {
 }
 
 class SnakeBodyPart {
-  constructor(x, y) {
+  constructor(x, y, width, height) {
     this._x = x;
     this._y = y;
+    this._width = width;
+    this._height = height;
   }
 
   get x() {
@@ -310,11 +326,27 @@ class SnakeBodyPart {
   set y(y) {
     this._y = y;
   }
+
+  get width() {
+    return this._width;
+  }
+
+  set width(width) {
+    this._width = width;
+  }
+
+  get height() {
+    return this._height;
+  }
+
+  set height(height) {
+    this._height = height;
+  }
 }
 
 class Food {
   constructor(game) {
-    this._radius = 10;
+    this._radius = 8;
     this._color = "#f1c40f";
     const randomCoordinate = game.generateRandomCoordinates();
     this._x = randomCoordinate[0];
@@ -322,7 +354,7 @@ class Food {
     this._y = randomCoordinate[1];
   }
 
-  get radius(radius) {
+  get radius() {
     return this._radius;
   }
 
