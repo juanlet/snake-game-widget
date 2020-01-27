@@ -21,9 +21,13 @@ class Game {
     this.render();
   }
 
-  setEvents() {
-    document.onkeydown = this.onArrowKeyDown.bind(this);
+  static get ctx() {
+    return Game._ctx;
+  }
 
+  setEvents() {
+    //check for multiple keys pressed as well
+    document.onkeydown = this.onArrowKeyDown.bind(this);
     setInterval(() => {
       if (Game.currentDirection) {
         this._snake.updateBody(Game.currentDirection);
@@ -31,27 +35,24 @@ class Game {
       }
     }, 50);
   }
+  //renders everything on the canvas
+  render() {
+    this.drawSnake();
+    this.drawFood();
+  }
 
   onArrowKeyDown(e) {
     const { keyCode } = e;
 
     if (
-      [37, 38, 39, 40].indexOf(keyCode) !== -1 &&
+      Game.keys[keyCode] &&
       this.isSnakeHeadInBounds() &&
       !this.pressedOppositeDirection(keyCode)
     ) {
       Game.currentDirection = Game.keys[keyCode];
     }
   }
-
-  get width() {
-    return this._width;
-  }
-
-  get height() {
-    return this._height;
-  }
-
+  //draws the snake on screen
   drawSnake() {
     const ctx = Game.ctx;
     const snake = this._snake;
@@ -65,7 +66,7 @@ class Game {
 
     ctx.restore();
   }
-
+  //draws the food on screen
   drawFood() {
     this._food = new Food(this);
     const food = this._food;
@@ -79,6 +80,7 @@ class Game {
     ctx.restore();
   }
 
+  //checks if user has pressed the opposite direction of the current one
   pressedOppositeDirection(keyCode) {
     return (Game.currentDirection === "U" && Game.keys[keyCode] === "B") ||
       (Game.currentDirection === "B" && Game.keys[keyCode] === "U") ||
@@ -87,42 +89,34 @@ class Game {
       ? true
       : false;
   }
-
-  render() {
-    this.drawSnake();
-    this.drawFood();
-  }
-
-  static get ctx() {
-    return Game._ctx;
-  }
-
+  //generates a random coordinate within the bounds of the canvas
   generateRandomCoordinates() {
     const { top, right, bottom, left } = Game.coordinates;
 
-    const x = Math.floor(Math.random() * 480 + 10); //Math.floor(Math.random() * (right + 20)) + (left - 20);
-    const y = Math.floor(Math.random() * 480 + 10); //Math.floor(Math.random() * (bottom - 20)) + (top + 20);
-
+    const x = Math.floor(Math.random() * 480 + 20);
+    const y = Math.floor(Math.random() * 480 + 20);
     return [x, y];
   }
 
+  //checks if snake is still on the canvas
   isSnakeHeadInBounds() {
     const { x, y } = this._snake.body[0];
     const { top, right, bottom, left } = Game.coordinates;
 
     return x >= right || x <= left || y <= top || y >= bottom ? false : true;
   }
-
-  static clearRectangle(x, y) {
+  //clear a body part of the snake from screen
+  static clearSnakeBodyPart(x, y) {
     Game.ctx.clearRect(x, y, 20, 20);
   }
-
+  //clears food from screen
   static clearFood(x, y) {
     Game.ctx.beginPath();
     Game.ctx.clearRect(x - 10 - 1, y - 10 - 1, 10 * 2 + 2, 10 * 2 + 2);
     Game.ctx.closePath();
   }
 
+  //converts out of bounds coordinates into an inbound coordinate on the opposite side
   static convertToInboundCoordinates(x, y) {
     const { top, right, bottom, left } = Game.coordinates;
 
@@ -147,14 +141,15 @@ class Game {
 
     return newCoords;
   }
-
+  //detects a collision between two points. Eg: Between the snake's head and the food
   detectCollision(x, y) {
     const food = this._food;
+    const collisionRange = 25;
     if (
-      x > food.x - 25 &&
-      x < food.x + 25 &&
-      y > food.y - 25 &&
-      y < food.y + 25
+      x > food.x - collisionRange &&
+      x < food.x + collisionRange &&
+      y > food.y - collisionRange &&
+      y < food.y + collisionRange
     ) {
       //add body to snake
       console.log("Found food. Point earned!");
@@ -195,7 +190,7 @@ class Snake {
   get dimensions() {
     return this._dimensions;
   }
-
+  //adds a bodypart to the snake
   addBodyPart() {
     let coords = [];
     let _x = this.body[this.body.length - 1].x;
@@ -242,7 +237,7 @@ class Snake {
     const newBodyPart = new SnakeBodyPart(coords[0], coords[1]);
     this.body.push(newBodyPart);
   }
-
+  //updates the body parts position to redraw them later and to make the snake move forward
   updateBody(direction) {
     const body = this.body;
     let prevCoords = [];
@@ -287,7 +282,7 @@ class Snake {
       }
       const nextElem = body[i - 1];
       prevCoords = Game.convertToInboundCoordinates(nextElem.x, nextElem.y);
-      Game.clearRectangle(body[i].x, body[i].y);
+      Game.clearSnakeBodyPart(body[i].x, body[i].y);
       body[i].x = prevCoords[0];
       body[i].y = prevCoords[1];
     }
@@ -319,8 +314,7 @@ class SnakeBodyPart {
 
 class Food {
   constructor(game) {
-    this._width = 20;
-    this._height = 20;
+    this._radius = 10;
     this._color = "#f1c40f";
     const randomCoordinate = game.generateRandomCoordinates();
     this._x = randomCoordinate[0];
@@ -328,12 +322,8 @@ class Food {
     this._y = randomCoordinate[1];
   }
 
-  set width(width) {
-    this._width = width;
-  }
-
-  set height(height) {
-    this._height = height;
+  get radius(radius) {
+    return this._radius;
   }
 
   get x() {
