@@ -13,14 +13,12 @@ class Game {
     39: "R",
     40: "B"
   };
+  static snake = null;
+  static food = null;
+  static score = 0;
 
   constructor() {
-    //Game._ctx.font = "20px Calibri";
-    this._width = 500;
-    this._height = 500;
-    this._snake = new Snake();
-    this._food = null;
-    this._score = 0;
+    Game.snake = new Snake();
     this.setEvents();
     this.render();
   }
@@ -34,15 +32,15 @@ class Game {
     document.onkeydown = this.onArrowKeyDown.bind(this);
     setInterval(() => {
       if (Game.currentDirection) {
-        this._snake.updateBody(Game.currentDirection);
+        Game.snake.updateBody(Game.currentDirection);
         this.drawSnake();
       }
     }, 50);
   }
   //renders everything on the canvas
   render() {
-    this.drawSnake();
     this.drawFood();
+    this.drawSnake();
   }
 
   onArrowKeyDown(e) {
@@ -59,21 +57,37 @@ class Game {
   //draws the snake on screen
   drawSnake() {
     const ctx = Game.ctx;
-    const snake = this._snake;
+    const snake = Game.snake;
+    const food = Game.food;
     ctx.save();
 
     snake.body.map((bp, i) => {
       ctx.fillStyle = i === 0 ? "#9b59b6" : snake.color;
-
       ctx.fillRect(bp.x, bp.y, snake.body[i].width, snake.body[i].height);
     });
+
+    let doCollide = Game.detectCollision(
+      { x: snake.body[0].x, y: snake.body[0].y },
+      food,
+      10
+    );
+
+    console.log(doCollide);
+    if (doCollide) {
+      console.log(food.x, food.y);
+      console.log("Found food. Point earned!");
+      snake.addBodyPart();
+      snake.updateBody(Game.currentDirection);
+      Game.clearFood(food.x, food.y);
+      this.drawFood();
+    }
 
     ctx.restore();
   }
   //draws the food on screen
   drawFood() {
-    this._food = new Food(this);
-    const food = this._food;
+    Game.food = new Food(this);
+    const food = Game.food;
     const ctx = Game.ctx;
     console.log("Drawing food", food.x, food.y);
     ctx.save();
@@ -100,13 +114,12 @@ class Game {
 
     const x = Math.floor(Math.random() * 480 + distanceToWalls);
     const y = Math.floor(Math.random() * 480 + distanceToWalls);
-    console.log([x, y]);
     return [x, y];
   }
 
   //checks if snake is still on the canvas
   isSnakeHeadInBounds() {
-    const { x, y } = this._snake.body[0];
+    const { x, y } = Game.snake.body[0];
     const { top, right, bottom, left } = Game.coordinates;
 
     return x >= right || x <= left || y <= top || y >= bottom ? false : true;
@@ -148,7 +161,11 @@ class Game {
     return newCoords;
   }
   //detects a collision between two points. Eg: Between the snake's head and the food, between the snake head and body
-  detectCollision(firstObject, secondObject, collisionRange) {
+  static detectCollision(firstObject, secondObject, collisionRange) {
+    console.log(
+      [firstObject.x, firstObject.y],
+      [secondObject.x, secondObject.y]
+    );
     if (
       firstObject &&
       secondObject &&
@@ -178,7 +195,6 @@ class Snake {
       new SnakeBodyPart(200, 200, 20, 20)
     ];
     this._color = "#27ae60";
-    this._dimensions = [20, 20];
     this.step = 20;
   }
 
@@ -196,9 +212,6 @@ class Snake {
     return this._color;
   }
 
-  get dimensions() {
-    return this._dimensions;
-  }
   //adds a bodypart to the snake
   addBodyPart() {
     let coords = [];
@@ -251,13 +264,7 @@ class Snake {
     const body = this.body;
     let prevCoords = [];
     let convertedCoords;
-    let doCollide = false;
     for (let i = body.length - 1; i >= 0; i--) {
-      doCollide = game.detectCollision(
-        { x: body[i].x, y: body[i].y },
-        game.food,
-        30
-      );
       if (i === 0) {
         //direction
         switch (direction) {
