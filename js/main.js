@@ -3,13 +3,20 @@ class Game {
   static _ctx = Game._canvas.getContext("2d");
   static coordinates = Game._canvas.getBoundingClientRect();
   static currentDirection = null;
+  static keys = {
+    37: "L",
+    38: "U",
+    39: "R",
+    40: "B"
+  };
+
   constructor() {
     //Game._ctx.font = "20px Calibri";
     this._width = 500;
     this._height = 500;
     this._snake = new Snake();
     this._food = null;
-    console.log("snake", this._snake);
+    this._score = 0;
     this.setEvents();
     this.render();
   }
@@ -18,43 +25,22 @@ class Game {
     document.onkeydown = this.onArrowKeyDown.bind(this);
 
     setInterval(() => {
-      console.log("CHECK", Game.currentDirection);
       if (Game.currentDirection) {
-        //avanzar
         this._snake.updateBody(Game.currentDirection);
         this.drawSnake();
       }
-    }, 100);
+    }, 50);
   }
 
   onArrowKeyDown(e) {
     const { keyCode } = e;
-    console.log("key down", keyCode);
-    if ([37, 38, 39, 40].indexOf(keyCode) !== -1) {
-      switch (keyCode) {
-        case 37:
-          //left
-          Game.currentDirection = "L";
-          break;
-        case 38:
-          //up
-          Game.currentDirection = "U";
 
-          break;
-        case 39:
-          //right
-          Game.currentDirection = "R";
-
-          break;
-        case 40:
-          //down
-          Game.currentDirection = "B";
-
-          break;
-
-        default:
-          break;
-      }
+    if (
+      [37, 38, 39, 40].indexOf(keyCode) !== -1 &&
+      this.isSnakeHeadInBounds() &&
+      !this.pressedOppositeDirection(keyCode)
+    ) {
+      Game.currentDirection = Game.keys[keyCode];
     }
   }
 
@@ -72,7 +58,7 @@ class Game {
     ctx.save();
 
     snake.body.map((bp, i) => {
-      ctx.fillStyle = i === 0 ? "black" : snake.color;
+      ctx.fillStyle = i === 0 ? "#9b59b6" : snake.color;
 
       ctx.fillRect(bp.x, bp.y, snake.dimensions[0], snake.dimensions[1]);
     });
@@ -84,13 +70,22 @@ class Game {
     this._food = new Food(this);
     const food = this._food;
     const ctx = Game.ctx;
-
+    console.log("Drawing food", food.x, food.y);
     ctx.save();
     ctx.fillStyle = food.color;
     ctx.beginPath();
     ctx.arc(food.x, food.y, 10, 0, 2 * Math.PI);
     ctx.fill();
     ctx.restore();
+  }
+
+  pressedOppositeDirection(keyCode) {
+    return (Game.currentDirection === "U" && Game.keys[keyCode] === "B") ||
+      (Game.currentDirection === "B" && Game.keys[keyCode] === "U") ||
+      (Game.currentDirection === "L" && Game.keys[keyCode] === "R") ||
+      (Game.currentDirection === "R" && Game.keys[keyCode] === "L")
+      ? true
+      : false;
   }
 
   render() {
@@ -105,14 +100,17 @@ class Game {
   generateRandomCoordinates() {
     const { top, right, bottom, left } = Game.coordinates;
 
-    const x = Math.floor(Math.random() * (right + 20)) + (left - 20);
-    const y = Math.floor(Math.random() * (bottom - 20)) + (top + 20);
+    const x = Math.floor(Math.random() * 480 + 10); //Math.floor(Math.random() * (right + 20)) + (left - 20);
+    const y = Math.floor(Math.random() * 480 + 10); //Math.floor(Math.random() * (bottom - 20)) + (top + 20);
 
-    const roundedX = Math.floor(x / 10) * 10;
+    return [x, y];
+  }
 
-    const roundedY = Math.floor(y / 10) * 10;
+  isSnakeHeadInBounds() {
+    const { x, y } = this._snake.body[0];
+    const { top, right, bottom, left } = Game.coordinates;
 
-    return [roundedX, roundedY];
+    return x >= right || x <= left || y <= top || y >= bottom ? false : true;
   }
 
   static clearRectangle(x, y) {
@@ -129,19 +127,20 @@ class Game {
     const { top, right, bottom, left } = Game.coordinates;
 
     const newCoords = [];
+    const drawingOffset = 0;
 
     if (x < left) {
-      newCoords[0] = right;
+      newCoords[0] = right - drawingOffset;
     } else if (x > right) {
-      newCoords[0] = left;
+      newCoords[0] = left + drawingOffset;
     } else {
       newCoords[0] = x;
     }
 
     if (y > bottom) {
-      newCoords[1] = top;
+      newCoords[1] = top - drawingOffset;
     } else if (y < top) {
-      newCoords[1] = bottom;
+      newCoords[1] = bottom + drawingOffset;
     } else {
       newCoords[1] = y;
     }
@@ -151,7 +150,6 @@ class Game {
 
   detectCollision(x, y) {
     const food = this._food;
-    //(x < food.x + 10 ||  x > food.x - 10) && (y < food.y + 10 ||  y > food.y - 10)
     if (
       x > food.x - 25 &&
       x < food.x + 25 &&
@@ -159,7 +157,7 @@ class Game {
       y < food.y + 25
     ) {
       //add body to snake
-      console.log("you ate food");
+      console.log("Found food. Point earned!");
       this._snake.addBodyPart();
       this.drawSnake();
       Game.clearFood(this._food.x, this._food.y);
@@ -175,7 +173,7 @@ class Snake {
       new SnakeBodyPart(210, 200),
       new SnakeBodyPart(200, 200)
     ];
-    this._color = "green";
+    this._color = "#27ae60";
     this._dimensions = [20, 20];
     this.step = 20;
   }
@@ -198,12 +196,13 @@ class Snake {
     return this._dimensions;
   }
 
-  addBodyPart(direction) {
+  addBodyPart() {
     let coords = [];
     let _x = this.body[this.body.length - 1].x;
     let _y = this.body[this.body.length - 1].y;
+    let convertedCoords = [];
 
-    switch (direction) {
+    switch (Game.currentDirection) {
       case "U":
         coords[0] = _x;
         convertedCoords = Game.convertToInboundCoordinates(
@@ -322,7 +321,7 @@ class Food {
   constructor(game) {
     this._width = 20;
     this._height = 20;
-    this._color = "orange";
+    this._color = "#f1c40f";
     const randomCoordinate = game.generateRandomCoordinates();
     this._x = randomCoordinate[0];
 
