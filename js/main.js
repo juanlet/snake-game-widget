@@ -153,27 +153,6 @@ class Game {
     ctx.restore();
   }
 
-  //draws the food on screen
-  /*    drawFood() {
-    Game.food = new Food(this);
-    console.log("Draw food", Game.food.x, Game.food.y);
-    const food = Game.food;
-    const ctx = Game.ctx;
-    ctx.save();
-    ctx.fillStyle = food.color;
-    ctx.beginPath();
-     ctx.arc(food.x, food.y, food.radius, 0, 2 * Math.PI);
-    ctx.fill(); 
-    //ctx.fillRect(food.x, food.y, food.width, food.height);
-
-    ctx.restore();
-  }  */
-
-  /* updateScore() {
-    this.score++;
-    Game.scoreHolder.innerHTML = this.score;
-  } */
-
   //checks if user has pressed the opposite direction of the current one
   pressedOppositeDirection(keyCode) {
     /*  return (Game.currentDirection === "U" && Game.keys[keyCode] === "B") ||
@@ -251,15 +230,6 @@ class Game {
       textCoords[1] <= snakeHead.y + snakeHead.height
     );
   }
-
-  /*  collideWithSelf() {
-    const head = Game.snake.body[0];
-    const body = Game.snake.body.slice(1);
-
-    return body.some(bp => {
-      return Game.detectCollisionRectangles(head, bp);
-    });
-  } */
 }
 
 class Snake {
