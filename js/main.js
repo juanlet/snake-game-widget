@@ -3,6 +3,7 @@ class Game {
     width: 500,
     height: 500
   };
+  static scoreHolder = document.getElementById("score-holder");
   static _canvas = document.getElementById("ctx");
   static _ctx = Game._canvas.getContext("2d");
   static coordinates = Game._canvas.getBoundingClientRect();
@@ -22,37 +23,51 @@ class Game {
     Game.snake = new Snake();
     this.setEvents();
     this.render();
+    this._score = 0;
+    this._textCoords;
+    this._lineHeight;
   }
 
   static get ctx() {
     return Game._ctx;
   }
 
+  get score() {
+    return this._score;
+  }
+
+  set score(score) {
+    this._score = score;
+  }
+
   setEvents() {
     //check for multiple keys pressed as well
     document.onkeydown = this.onArrowKeyDown.bind(this);
     this.interval = setInterval(() => {
-      const collideSelf = this.collideWithSelf();
-      console.log("COLLIDE", collideSelf);
+      /* const collideSelf = this.collideWithSelf();
       if (collideSelf) {
         clearInterval(this.interval);
         console.log("You lost");
         return;
-      }
+      } */
       if (Game.currentDirection) {
         Game.snake.updateBody(Game.currentDirection);
         this.drawSnake();
       }
-    }, 100);
+    }, 70);
   }
   //renders everything on the canvas
   render() {
-    this.drawFood();
+    //this.drawFood();
+    this.drawText();
     this.drawSnake();
   }
 
   onArrowKeyDown(e) {
     const { keyCode } = e;
+    if (keyCode === 32) {
+      location.reload();
+    }
 
     if (
       Game.keys[keyCode] &&
@@ -62,73 +77,99 @@ class Game {
       Game.currentDirection = Game.keys[keyCode];
     }
   }
+
+  drawText() {
+    const ctx = Game.ctx;
+    //const textCoords = this.generateRandomCoordinates(20);
+    const textCoords = [320, 420];
+    this._textCoords = textCoords;
+    ctx.save();
+    ctx.font = "30px Nunito";
+    this._lineHeight = ctx.measureText("M").width;
+    ctx.fillStyle = "#fff";
+    ctx.fillText("Juan", textCoords[0], textCoords[1]);
+    ctx.fillText("DEV", textCoords[0], textCoords[1] + 30);
+
+    ctx.restore();
+  }
   //draws the snake on screen
   drawSnake() {
     const ctx = Game.ctx;
     const snake = Game.snake;
     const food = Game.food;
+
     ctx.save();
+    let doCollideWithFood;
+    /* doCollideWithFood = Game.detectCollisionRectangles(food, {
+      width: 10,
+      height: 50
+    }); */
+
+    doCollideWithFood = this.detectCollisionRectangles(
+      snake.body[0],
+      ctx.measureText("Letamendiaaaa")
+    );
 
     snake.body.map((bp, i) => {
       ctx.fillStyle = i === 0 ? "#9b59b6" : snake.color;
       ctx.fillRect(bp.x, bp.y, snake.body[i].width, snake.body[i].height);
     });
 
-    let doCollideWithFood = Game.detectCollision(
-      { x: snake.body[0].x, y: snake.body[0].y },
-      food,
-      30
-    );
-
-    let doCollideWithSelf = Game.detectCollision(
-      { x: snake.body[0].x, y: snake.body[0].y },
-      food,
-      30
-    );
-
     if (doCollideWithFood) {
-      console.log("Found food. Point earned!");
-      snake.updateBody(Game.currentDirection);
-      Game.clearFood(food.x, food.y);
-      snake.addBodyPart();
+      console.log("Found me!");
+      clearInterval(this.interval);
+      //snake.updateBody(Game.currentDirection);
+      //this.updateScore();
+      //Game.clearFood(food.x, food.y);
+      //snake.addBodyPart();
 
-      this.drawFood();
+      //this.drawFood();
     }
 
     ctx.restore();
   }
+
   //draws the food on screen
-  drawFood() {
+  /*    drawFood() {
     Game.food = new Food(this);
+    console.log("Draw food", Game.food.x, Game.food.y);
     const food = Game.food;
     const ctx = Game.ctx;
     ctx.save();
     ctx.fillStyle = food.color;
     ctx.beginPath();
-    ctx.arc(food.x, food.y, food.radius, 0, 2 * Math.PI);
-    ctx.fill();
+     ctx.arc(food.x, food.y, food.radius, 0, 2 * Math.PI);
+    ctx.fill(); 
+    //ctx.fillRect(food.x, food.y, food.width, food.height);
+
     ctx.restore();
-  }
+  }  */
+
+  /* updateScore() {
+    this.score++;
+    Game.scoreHolder.innerHTML = this.score;
+  } */
 
   //checks if user has pressed the opposite direction of the current one
   pressedOppositeDirection(keyCode) {
-    return (Game.currentDirection === "U" && Game.keys[keyCode] === "B") ||
+    /*  return (Game.currentDirection === "U" && Game.keys[keyCode] === "B") ||
       (Game.currentDirection === "B" && Game.keys[keyCode] === "U") ||
       (Game.currentDirection === "L" && Game.keys[keyCode] === "R") ||
       (Game.currentDirection === "R" && Game.keys[keyCode] === "L")
       ? true
-      : false;
+      : false; */
+    return false;
   }
   //generates a random coordinate within the bounds of the canvas
-  generateRandomCoordinates(distanceToWalls = 0) {
+  generateRandomCoordinates(distanceToWalls = 40) {
     const { top, right, bottom, left } = Game.coordinates;
 
-    const x = Game.getRandomInt(0, 500 - distanceToWalls);
-    const y = Game.getRandomInt(0, 500 - distanceToWalls);
-    return [x, y];
+    const x = Game.getRandomMultiple(distanceToWalls, 500 - distanceToWalls);
+    //const y = Game.getRandomInt(distanceToWalls, 500 - distanceToWalls);
+    return [x, x];
   }
 
-  static getRandomInt(min, max) {
+  static getRandomMultiple(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
 
@@ -146,7 +187,7 @@ class Game {
   //clears food from screen
   static clearFood(x, y) {
     Game.ctx.beginPath();
-    Game.ctx.clearRect(x - 10 - 1, y - 10 - 1, 10 * 2 + 2, 10 * 2 + 2);
+    Game.ctx.clearRect(x - 15 - 1, y - 15 - 1, 15 * 2 + 2, 15 * 2 + 2);
     Game.ctx.closePath();
   }
 
@@ -175,38 +216,34 @@ class Game {
 
     return newCoords;
   }
-  //detects a collision between two points. Eg: Between the snake's head and the food, between the snake head and body
-  static detectCollision(firstObject, secondObject, collisionRange) {
-    if (
-      firstObject &&
-      secondObject &&
-      firstObject.x > secondObject.x - collisionRange &&
-      firstObject.x < secondObject.x + collisionRange &&
-      firstObject.y > secondObject.y - collisionRange &&
-      firstObject.y < secondObject.y + collisionRange
-    ) {
-      return true;
-    }
-
-    return false;
+  //detects a collision between two rectangles. Eg: Between the snake's head and the food, between the snake head and body
+  detectCollisionRectangles(snakeHead, text) {
+    //console.log(text, text.width, this._textCoords);
+    const textCoords = this._textCoords;
+    return (
+      snakeHead.x <= textCoords[0] + text.width &&
+      textCoords[0] <= snakeHead.x + snakeHead.width &&
+      snakeHead.y <= textCoords[1] + this._lineHeight * 2 &&
+      textCoords[1] <= snakeHead.y + snakeHead.height
+    );
   }
 
-  collideWithSelf() {
+  /*  collideWithSelf() {
     const head = Game.snake.body[0];
     const body = Game.snake.body.slice(1);
 
     return body.some(bp => {
-      Game.detectCollision(head, bp, 10);
+      return Game.detectCollisionRectangles(head, bp);
     });
-  }
+  } */
 }
 
 class Snake {
   constructor() {
     this._body = [
-      new SnakeBodyPart(220, 200),
-      new SnakeBodyPart(210, 200),
-      new SnakeBodyPart(200, 200)
+      new SnakeBodyPart(80, 60),
+      new SnakeBodyPart(60, 60),
+      new SnakeBodyPart(40, 60)
     ];
     this._color = "#27ae60";
     this.dim = this._body[0].height;
@@ -312,7 +349,7 @@ class Snake {
 }
 
 class SnakeBodyPart {
-  constructor(x, y, width = 15, height = 15) {
+  constructor(x, y, width = 20, height = 20) {
     this._x = x;
     this._y = y;
     this._width = width;
@@ -353,17 +390,30 @@ class SnakeBodyPart {
 }
 
 class Food {
-  constructor(game) {
-    this._radius = 4;
+  constructor(game, width = 15, height = 15) {
+    /* this._radius = 5; */
     this._color = "#f1c40f";
     const randomCoordinate = game.generateRandomCoordinates(100);
+    this._width = width;
+    this._height = height;
     this._x = randomCoordinate[0];
-
-    this._y = randomCoordinate[1];
+    this._y = randomCoordinate[1] / this._width;
   }
 
-  get radius() {
-    return this._radius;
+  get width() {
+    return this._width;
+  }
+
+  set width(width) {
+    this._width = width;
+  }
+
+  get height() {
+    return this._height;
+  }
+
+  set height(height) {
+    this._height = height;
   }
 
   get x() {
