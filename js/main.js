@@ -16,6 +16,7 @@ class Game {
   static snake = null;
   static food = null;
   static score = 0;
+  static interval = null;
 
   constructor() {
     Game.snake = new Snake();
@@ -30,12 +31,19 @@ class Game {
   setEvents() {
     //check for multiple keys pressed as well
     document.onkeydown = this.onArrowKeyDown.bind(this);
-    setInterval(() => {
+    this.interval = setInterval(() => {
+      const collideSelf = this.collideWithSelf();
+      console.log("COLLIDE", collideSelf);
+      if (collideSelf) {
+        clearInterval(this.interval);
+        console.log("You lost");
+        return;
+      }
       if (Game.currentDirection) {
         Game.snake.updateBody(Game.currentDirection);
         this.drawSnake();
       }
-    }, 50);
+    }, 100);
   }
   //renders everything on the canvas
   render() {
@@ -66,19 +74,24 @@ class Game {
       ctx.fillRect(bp.x, bp.y, snake.body[i].width, snake.body[i].height);
     });
 
-    let doCollide = Game.detectCollision(
+    let doCollideWithFood = Game.detectCollision(
       { x: snake.body[0].x, y: snake.body[0].y },
       food,
-      10
+      30
     );
 
-    console.log(doCollide);
-    if (doCollide) {
-      console.log(food.x, food.y);
+    let doCollideWithSelf = Game.detectCollision(
+      { x: snake.body[0].x, y: snake.body[0].y },
+      food,
+      30
+    );
+
+    if (doCollideWithFood) {
       console.log("Found food. Point earned!");
-      snake.addBodyPart();
       snake.updateBody(Game.currentDirection);
       Game.clearFood(food.x, food.y);
+      snake.addBodyPart();
+
       this.drawFood();
     }
 
@@ -89,7 +102,6 @@ class Game {
     Game.food = new Food(this);
     const food = Game.food;
     const ctx = Game.ctx;
-    console.log("Drawing food", food.x, food.y);
     ctx.save();
     ctx.fillStyle = food.color;
     ctx.beginPath();
@@ -108,13 +120,16 @@ class Game {
       : false;
   }
   //generates a random coordinate within the bounds of the canvas
-  generateRandomCoordinates() {
+  generateRandomCoordinates(distanceToWalls = 0) {
     const { top, right, bottom, left } = Game.coordinates;
-    const distanceToWalls = 20;
 
-    const x = Math.floor(Math.random() * 480 + distanceToWalls);
-    const y = Math.floor(Math.random() * 480 + distanceToWalls);
+    const x = Game.getRandomInt(0, 500 - distanceToWalls);
+    const y = Game.getRandomInt(0, 500 - distanceToWalls);
     return [x, y];
+  }
+
+  static getRandomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
   }
 
   //checks if snake is still on the canvas
@@ -162,10 +177,6 @@ class Game {
   }
   //detects a collision between two points. Eg: Between the snake's head and the food, between the snake head and body
   static detectCollision(firstObject, secondObject, collisionRange) {
-    console.log(
-      [firstObject.x, firstObject.y],
-      [secondObject.x, secondObject.y]
-    );
     if (
       firstObject &&
       secondObject &&
@@ -178,24 +189,27 @@ class Game {
     }
 
     return false;
+  }
 
-    //detect collision between snake's head and body
-    /*  const head = this._snake.body[0];
-    const body = this._snake.body.slice(1);
+  collideWithSelf() {
+    const head = Game.snake.body[0];
+    const body = Game.snake.body.slice(1);
 
-    body.some() */
+    return body.some(bp => {
+      Game.detectCollision(head, bp, 10);
+    });
   }
 }
 
 class Snake {
   constructor() {
     this._body = [
-      new SnakeBodyPart(220, 200, 20, 20),
-      new SnakeBodyPart(210, 200, 20, 20),
-      new SnakeBodyPart(200, 200, 20, 20)
+      new SnakeBodyPart(220, 200),
+      new SnakeBodyPart(210, 200),
+      new SnakeBodyPart(200, 200)
     ];
     this._color = "#27ae60";
-    this.step = 20;
+    this.dim = this._body[0].height;
   }
 
   //addPart() {}
@@ -222,40 +236,27 @@ class Snake {
     switch (Game.currentDirection) {
       case "U":
         coords[0] = _x;
-        convertedCoords = Game.convertToInboundCoordinates(
-          null,
-          _y + this.step
-        );
+        convertedCoords = Game.convertToInboundCoordinates(null, _y + this.dim);
         coords[1] = convertedCoords[1];
         break;
 
       case "R":
-        convertedCoords = Game.convertToInboundCoordinates(
-          _y - this.step,
-          null
-        );
+        convertedCoords = Game.convertToInboundCoordinates(_y - this.dim, null);
         coords[0] = convertedCoords[0];
         coords[1] = _y;
         break;
 
       case "B":
         coords[0] = _x;
-        convertedCoords = Game.convertToInboundCoordinates(
-          null,
-          _y - this.step
-        );
+        convertedCoords = Game.convertToInboundCoordinates(null, _y - this.dim);
         coords[1] = convertedCoords[1];
         break;
       case "L":
-        convertedCoords = Game.convertToInboundCoordinates(
-          _x + this.step,
-          null
-        );
+        convertedCoords = Game.convertToInboundCoordinates(_x + this.dim, null);
         coords[0] = convertedCoords[0];
         coords[1] = _y;
         break;
     }
-
     const newBodyPart = new SnakeBodyPart(coords[0], coords[1]);
     this.body.push(newBodyPart);
   }
@@ -271,14 +272,14 @@ class Snake {
           case "U":
             convertedCoords = Game.convertToInboundCoordinates(
               null,
-              body[i].y - this.step
+              body[i].y - this.dim
             );
             body[i].y = convertedCoords[1];
             break;
 
           case "R":
             convertedCoords = Game.convertToInboundCoordinates(
-              body[i].x + this.step,
+              body[i].x + this.dim,
               null
             );
             body[i].x = convertedCoords[0];
@@ -287,13 +288,13 @@ class Snake {
           case "B":
             convertedCoords = Game.convertToInboundCoordinates(
               null,
-              body[i].y + this.step
+              body[i].y + this.dim
             );
             body[i].y = convertedCoords[1];
             break;
           case "L":
             convertedCoords = Game.convertToInboundCoordinates(
-              body[i].x - this.step,
+              body[i].x - this.dim,
               null
             );
             body[i].x = convertedCoords[0];
@@ -311,7 +312,7 @@ class Snake {
 }
 
 class SnakeBodyPart {
-  constructor(x, y, width, height) {
+  constructor(x, y, width = 15, height = 15) {
     this._x = x;
     this._y = y;
     this._width = width;
@@ -353,9 +354,9 @@ class SnakeBodyPart {
 
 class Food {
   constructor(game) {
-    this._radius = 8;
+    this._radius = 4;
     this._color = "#f1c40f";
-    const randomCoordinate = game.generateRandomCoordinates();
+    const randomCoordinate = game.generateRandomCoordinates(100);
     this._x = randomCoordinate[0];
 
     this._y = randomCoordinate[1];
