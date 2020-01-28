@@ -118,6 +118,7 @@ class Game {
     if (doCollideWithFood) {
       console.log("Found me!");
       clearInterval(this.interval);
+      this.showWelcomeMessage();
       //snake.updateBody(Game.currentDirection);
       //this.updateScore();
       //Game.clearFood(food.x, food.y);
@@ -126,6 +127,29 @@ class Game {
       //this.drawFood();
     }
 
+    ctx.restore();
+  }
+
+  showWelcomeMessage() {
+    const ctx = Game.ctx;
+    ctx.clearRect(0, 0, Game.dimensions.width, Game.dimensions.height);
+    ctx.save();
+    ctx.font = "30px Nunito";
+    const widthFound = ctx.measureText("You found me!").width;
+    const height = ctx.measureText("M").width;
+    const widthWelcome = ctx.measureText("Welcome to my site!").width;
+
+    ctx.fillStyle = "#fff";
+    ctx.fillText(
+      "You found me!",
+      Game.dimensions.width / 2 - widthFound / 2,
+      Game.dimensions.height / 2
+    );
+    ctx.fillText(
+      "Welcome to my site!",
+      Game.dimensions.width / 2 - widthWelcome / 2,
+      Game.dimensions.height / 2 + 30
+    );
     ctx.restore();
   }
 
