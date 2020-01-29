@@ -63,7 +63,7 @@ class Game {
 
   onArrowKeyDown(e) {
     const { keyCode } = e;
-    if (keyCode === 32) {
+    if (keyCode === 82) {
       location.reload();
     }
 
