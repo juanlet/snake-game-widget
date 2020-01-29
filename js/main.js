@@ -210,8 +210,6 @@ class Snake {
     this.dim = this._body[0].height;
   }
 
-  //addPart() {}
-
   get body() {
     return this._body;
   }
@@ -224,40 +222,6 @@ class Snake {
     return this._color;
   }
 
-  //adds a bodypart to the snake
-  addBodyPart() {
-    let coords = [];
-    let _x = this.body[this.body.length - 1].x;
-    let _y = this.body[this.body.length - 1].y;
-    let convertedCoords = [];
-
-    switch (Game.currentDirection) {
-      case "U":
-        coords[0] = _x;
-        convertedCoords = Game.convertToInboundCoordinates(null, _y + this.dim);
-        coords[1] = convertedCoords[1];
-        break;
-
-      case "R":
-        convertedCoords = Game.convertToInboundCoordinates(_y - this.dim, null);
-        coords[0] = convertedCoords[0];
-        coords[1] = _y;
-        break;
-
-      case "B":
-        coords[0] = _x;
-        convertedCoords = Game.convertToInboundCoordinates(null, _y - this.dim);
-        coords[1] = convertedCoords[1];
-        break;
-      case "L":
-        convertedCoords = Game.convertToInboundCoordinates(_x + this.dim, null);
-        coords[0] = convertedCoords[0];
-        coords[1] = _y;
-        break;
-    }
-    const newBodyPart = new SnakeBodyPart(coords[0], coords[1]);
-    this.body.push(newBodyPart);
-  }
   //updates the body parts position to redraw them later and to make the snake move forward
   updateBody(direction) {
     const body = this.body;
