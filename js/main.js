@@ -9,10 +9,10 @@ class Game {
   static coordinates = Game._canvas.getBoundingClientRect();
   static currentDirection = null;
   static keys = {
-    37: "L",
-    38: "U",
-    39: "R",
-    40: "B"
+    65: "L",
+    87: "U",
+    68: "R",
+    83: "B"
   };
   static snake = null;
   static food = null;
