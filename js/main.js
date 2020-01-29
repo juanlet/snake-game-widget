@@ -15,7 +15,6 @@ class Game {
     83: "B"
   };
   static snake = null;
-  static food = null;
   static score = 0;
   static interval = null;
 
@@ -58,7 +57,6 @@ class Game {
   }
   //renders everything on the canvas
   render() {
-    //this.drawFood();
     this.drawText();
     this.drawSnake();
   }
@@ -69,11 +67,7 @@ class Game {
       location.reload();
     }
 
-    if (
-      Game.keys[keyCode] &&
-      this.isSnakeHeadInBounds() &&
-      !this.pressedOppositeDirection(keyCode)
-    ) {
+    if (Game.keys[keyCode] && this.isSnakeHeadInBounds()) {
       Game.currentDirection = Game.keys[keyCode];
     }
   }
@@ -96,14 +90,9 @@ class Game {
   drawSnake() {
     const ctx = Game.ctx;
     const snake = Game.snake;
-    const food = Game.food;
 
     ctx.save();
     let doCollideWithFood;
-    /* doCollideWithFood = Game.detectCollisionRectangles(food, {
-      width: 10,
-      height: 50
-    }); */
 
     doCollideWithFood = this.detectCollisionRectangles(
       snake.body[0],
@@ -119,12 +108,6 @@ class Game {
       console.log("Found me!");
       clearInterval(this.interval);
       this.showWelcomeMessage();
-      //snake.updateBody(Game.currentDirection);
-      //this.updateScore();
-      //Game.clearFood(food.x, food.y);
-      //snake.addBodyPart();
-
-      //this.drawFood();
     }
 
     ctx.restore();
@@ -153,16 +136,6 @@ class Game {
     ctx.restore();
   }
 
-  //checks if user has pressed the opposite direction of the current one
-  pressedOppositeDirection(keyCode) {
-    /*  return (Game.currentDirection === "U" && Game.keys[keyCode] === "B") ||
-      (Game.currentDirection === "B" && Game.keys[keyCode] === "U") ||
-      (Game.currentDirection === "L" && Game.keys[keyCode] === "R") ||
-      (Game.currentDirection === "R" && Game.keys[keyCode] === "L")
-      ? true
-      : false; */
-    return false;
-  }
   //generates a random coordinate within the bounds of the canvas
   generateRandomCoordinates(distanceToWalls = 40) {
     const { top, right, bottom, left } = Game.coordinates;
@@ -186,12 +159,6 @@ class Game {
   //clear a body part of the snake from screen
   static clearSnakeBodyPart(bodyPart) {
     Game.ctx.clearRect(bodyPart.x, bodyPart.y, bodyPart.width, bodyPart.height);
-  }
-  //clears food from screen
-  static clearFood(x, y) {
-    Game.ctx.beginPath();
-    Game.ctx.clearRect(x - 15 - 1, y - 15 - 1, 15 * 2 + 2, 15 * 2 + 2);
-    Game.ctx.closePath();
   }
 
   //converts out of bounds coordinates into an inbound coordinate on the opposite side
@@ -380,54 +347,6 @@ class SnakeBodyPart {
 
   set height(height) {
     this._height = height;
-  }
-}
-
-class Food {
-  constructor(game, width = 15, height = 15) {
-    /* this._radius = 5; */
-    this._color = "#f1c40f";
-    const randomCoordinate = game.generateRandomCoordinates(100);
-    this._width = width;
-    this._height = height;
-    this._x = randomCoordinate[0];
-    this._y = randomCoordinate[1] / this._width;
-  }
-
-  get width() {
-    return this._width;
-  }
-
-  set width(width) {
-    this._width = width;
-  }
-
-  get height() {
-    return this._height;
-  }
-
-  set height(height) {
-    this._height = height;
-  }
-
-  get x() {
-    return this._x;
-  }
-
-  get y() {
-    return this._y;
-  }
-
-  set x(x) {
-    this._x = x;
-  }
-
-  set y(y) {
-    this._y = y;
-  }
-
-  get color() {
-    return this._color;
   }
 }
 
